@@ -1,2 +1,1 @@
-#Rub the Server
-py manage.py runserver
+py manage.py runserver : to run the server
