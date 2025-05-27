@@ -2,12 +2,11 @@ import os
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render
-from django.http import JsonResponse
 from offers.utils import predict_from_pdf
 
 def upload_file(request):
     uploaded_file_url = None
-    prediction = None
+    formatted_prediction = None  # changed variable name for clarity
 
     if request.method == 'POST' and request.FILES.get('file'):
         file = request.FILES['file']
@@ -15,14 +14,25 @@ def upload_file(request):
         filename = fs.save(file.name, file)
         uploaded_file_url = fs.url(filename)
 
-        file_path = os.path.join(settings.MEDIA_ROOT, filename)
-
         try:
-            prediction = predict_from_pdf(file_path)
+            prediction_result = predict_from_pdf(filename)  # e.g., {'prediction': 'Real', 'probability_fake': 0.43}
+
+            prediction = prediction_result.get('prediction', 'Unknown')
+            probability_fake = prediction_result.get('probability_fake', 0)
+
+            try:
+                probability_float = float(probability_fake)
+            except:
+                probability_float = 0
+
+            probability_percentage = probability_float * 100
+
+            formatted_prediction = f"prediction: {prediction}, probability is fake: {probability_percentage:.0f}%"
+
         except Exception as e:
-            prediction = f"Error during prediction: {str(e)}"
+            formatted_prediction = f"Error: {str(e)}"
 
     return render(request, 'upload.html', {
         'file_url': uploaded_file_url,
-        'prediction': prediction
+        'prediction': formatted_prediction
     })
